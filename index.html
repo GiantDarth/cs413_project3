@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>cp723: Project 3 (Tiles) - (WIP))</title>
+        <!-- Bootstrap v3.3.6 -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+            integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    </head>
+
+    <body>
+        <main class="container">
+            <div class="well" style="margin-top: 20px;">
+                <h1 class="text-center">(WIP)</h1>
+                <p class="bg-warning text-warning" style="padding: 16px; font-size: 16px;">
+                    This game utilizes <mark>ES2015</mark> features, and requires at least
+                    Firefox 21, Chrome 45, or Microsoft Edge. Not tested on Safari and not supported on IE.</p>
+                <div class="text-center" id="gameport"></div>
+
+
+                <h2 class="h1">Instructions</h2>
+                <p class="bg-info text-info" style="padding: 16px; font-size: 16px;">
+                    Can you complete the pipe connection in time? Press <strong>R</strong> to rotate the current pipe.
+                    <strong>Click</strong> on the tile you want to place the tile down on!
+                </p>
+            </div>
+
+
+            <div style="margin-top: 80px;">
+                <h2 class="h1">Comments</h2>
+                <div id="disqus_thread"></div>
+            </div>
+        </main>
+
+        <script>
+            (function() {
+            var d = document, s = d.createElement('script');
+            s.src = 'https://nau-cs413.disqus.com/embed.js';
+            s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+            })();
+        </script>
+        <script src="lib/pixi/pixi.min.js"></script>
+        <script src="src/game.js"></script>
+    </body>
+</html>
