@@ -1,1 +1,1 @@
-# cs413_project3
+# CS413 (Virtual Worlds) - Project 3 (Tiles)
