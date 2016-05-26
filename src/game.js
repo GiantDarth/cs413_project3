@@ -62,48 +62,59 @@
                 .add('assets/assets.json')
                 .load(() => {
                     this.world = new PIXI.Container();
+
                     this.zoneContainer = new PIXI.Container();
+                    this.entityContainer = new PIXI.Container();
+
                     this.world.addChild(this.zoneContainer);
+                    this.world.addChild(this.entityContainer);
+
                     this.addZone();
-                    this.worldWidth = this.zones[0].worldWidth;
                     let spawn = this.zones[0].getObject('player_spawn');
                     this.player = new Player(spawn.x, spawn.y);
-                    this.world.addChild(this.player.sprite);
+                    this.entityContainer.addChild(this.player.sprite);
 
                     main.addChild(this.world);
 
                     this.enemies = new Array();
 
                     document.addEventListener('keydown', e => {
-                        switch(e.keyCode) {
-                            case(65):
-                            case(68):
-                                e.preventDefault();
-                                if(!this.player.isAlive || this.player.moving) {
-                                    return;
+                        switch(this.currentScreen) {
+                            case('main'):
+                                switch(e.keyCode) {
+                                    case(82):
+                                        this.reset();
+                                        return;
+                                    case(65):
+                                    case(68):
+                                        e.preventDefault();
+                                        if(!this.player.isAlive || this.player.moving) {
+                                            return;
+                                        }
+                                        else {
+                                            this.player.move_dir = MOVE_DIR.NONE;
+                                        }
                                 }
-                                else {
-                                    this.player.move_dir = MOVE_DIR.NONE;
+
+                                switch(e.keyCode) {
+                                    // A
+                                    case(65):
+                                        this.player.move_dir = MOVE_DIR.LEFT;
+                                        break;
+                                    // D
+                                    case(68):
+                                        this.player.move_dir = MOVE_DIR.RIGHT;
+                                        break;
+                                    // Space
+                                    case(32):
+                                        e.preventDefault();
+                                        this.player.punch();
+                                        break;
                                 }
-                        }
 
-                        switch(e.keyCode) {
-                            // A
-                            case(65):
-                                this.player.move_dir = MOVE_DIR.LEFT;
-                                break;
-                            // D
-                            case(68):
-                                this.player.move_dir = MOVE_DIR.RIGHT;
-                                break;
-                            // Space
-                            case(32):
-                                e.preventDefault();
-                                this.player.punch();
+                                this.player.move();
                                 break;
                         }
-
-                        this.player.move();
                     });
 
                     document.addEventListener('keyup', e => {
@@ -130,10 +141,12 @@
             this.player.update(this.enemies);
             for(let enemy of this.enemies) {
                 if(!enemy.isAlive) {
-                    this.world.removeChild(enemy.sprite);
+                    this.entityContainer.removeChild(enemy.sprite);
                 }
             }
+            let count = this.enemies.length;
             this.enemies = this.enemies.filter(enemy => enemy.isAlive);
+            this.player.kills += count - this.enemies.length;
             for(let enemy of this.enemies) {
                 enemy.update(this.player);
             }
@@ -142,11 +155,6 @@
             if(this.player.x > 0 && !this.zones[zone].entered) {
                 this.zones[zone].entered = true;
                 this.addZone();
-
-
-                if(zone > 0) {
-
-                }
             }
 
             // Final step
@@ -170,7 +178,7 @@
             for(let i = 0; i < zone.zone; i++) {
                 let enemy = new Enemy(spawn.x + zone.x + getRandomArbitrary(-TILE_SIZE * 2, TILE_SIZE * 2), spawn.y, 100);
                 this.enemies.push(enemy);
-                this.world.addChild(enemy.sprite);
+                this.entityContainer.addChild(enemy.sprite);
             }
 
 
@@ -184,6 +192,20 @@
 
         getZone() {
             return Math.floor(this.player.x / this.zones[0].worldWidth);
+        }
+
+        reset() {
+            this.entityContainer.removeChildren();
+
+            this.currentZone = 0;
+            this.zones = new Array();
+
+            this.enemies = new Array();
+
+            this.addZone();
+            let spawn = this.zones[0].getObject('player_spawn');
+            this.player = new Player(spawn.x, spawn.y);
+            this.entityContainer.addChild(this.player.sprite);
         }
     }
 
@@ -404,6 +426,7 @@
     class Player extends Entity {
         constructor(x, y) {
             super(x, y, 100, 1, DIRECTION.RIGHT, 'player');
+            this.kills = 0;
         }
 
         update(enemies) {
