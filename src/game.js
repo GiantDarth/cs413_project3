@@ -42,12 +42,18 @@
             this.screenMap.set('win', new PIXI.Container());
             this.screenMap.set('credits', new PIXI.Container());
 
-            this.paused = false;
-            // ... Menu code...
+            this.zones = new Array();
+            this.currentZone = 0;
+
             let main =this.screenMap.get('main');
-            main.addChild(this.screenMap.get('menu'));
             main.scale.x = ZOOM;
             main.scale.y = ZOOM;
+
+            this.paused = false;
+            // ... Menu code...
+
+            main.addChild(this.screenMap.get('menu'));
+
 
             PIXI.SCALE_MODES.DEFAULT = PIXI.SCALE_MODES.NEAREST;
             PIXI.loader
@@ -55,11 +61,18 @@
                 .add('tiles', 'assets/img/tiles/tiles.png')
                 .add('assets/assets.json')
                 .load(() => {
-                    this.world = tu.makeTiledWorld('zone_json', 'assets/img/tiles/tiles.png');
+                    this.world = new PIXI.Container();
+                    this.zoneContainer = new PIXI.Container();
+                    this.world.addChild(this.zoneContainer);
+                    this.addZone();
+                    this.worldWidth = this.zones[0].worldWidth;
+                    let spawn = this.zones[0].getObject('player_spawn');
+                    this.player = new Player(spawn.x, spawn.y);
+                    this.world.addChild(this.player.sprite);
+
                     main.addChild(this.world);
 
-                    this.player = new Player(this.world.getObject('player_spawn'));
-                    this.world.addChild(this.player.sprite);
+                    this.enemies = new Array();
 
                     document.addEventListener('keydown', e => {
                         switch(e.keyCode) {
@@ -107,12 +120,6 @@
                         }
                     });
 
-                    this.enemies = new Array();
-                    for(let i = 0; i < 5; i++) {
-                        this.enemies.push(new Enemy(this.world.getObject('enemy_spawn'), 100));
-                        this.world.addChild(this.enemies[i].sprite);
-                    }
-
                     // Initialize render loop
                     render();
                 });
@@ -130,14 +137,53 @@
             for(let enemy of this.enemies) {
                 enemy.update(this.player);
             }
+
+            let zone = this.getZone();
+            if(this.player.x > 0 && !this.zones[zone].entered) {
+                this.zones[zone].entered = true;
+                this.addZone();
+
+
+                if(zone > 0) {
+
+                }
+            }
+
             // Final step
             this.renderer.render(this.screenMap.get(this.currentScreen));
+        }
+
+        addZone() {
+            let zone = tu.makeTiledWorld('zone_json', 'assets/img/tiles/tiles.png');
+            zone.zone = this.currentZone;
+            zone.entered = false;
+            zone.x += zone.worldWidth * this.currentZone++;
+
+            this.spawnEnemies(zone);
+
+            this.zones.push(zone);
+            this.zoneContainer.addChild(zone);
+        }
+
+        spawnEnemies(zone) {
+            let spawn = zone.getObject('enemy_spawn');
+            for(let i = 0; i < zone.zone; i++) {
+                let enemy = new Enemy(spawn.x + zone.x + getRandomArbitrary(-TILE_SIZE * 2, TILE_SIZE * 2), spawn.y, 100);
+                this.enemies.push(enemy);
+                this.world.addChild(enemy.sprite);
+            }
+
+
         }
 
         moveCamera() {
             let x = -this.player.sprite.x * ZOOM + RENDER_WIDTH / 2 - this.player.sprite.width / 2 * ZOOM;
 
-            this.screenMap.get('main').x = -Math.max(0, Math.min(this.world.worldWidth * ZOOM - RENDER_WIDTH, -x));
+            this.screenMap.get('main').x = -Math.max(0, -x);
+        }
+
+        getZone() {
+            return Math.floor(this.player.x / this.zones[0].worldWidth);
         }
     }
 
@@ -297,7 +343,7 @@
         }
 
         getRelativeDir(other) {
-            if(this.sprite.x < other.sprite.x) {
+            if(this.x < other.x) {
                 return DIRECTION.RIGHT;
             }
             else {
@@ -310,6 +356,13 @@
                 this.moving = false;
                 return;
             }
+
+            // if(this.x < 0) {
+            //     this.x = TILE_SIZE;
+            //     this.moving = false;
+            //     this.move_dir = MOVE_DIR.NONE;
+            //     return;
+            // }
 
             this.moving = true;
             switch(this.move_dir) {
@@ -339,14 +392,18 @@
             return this.sprite.x;
         }
 
+        set x(value) {
+            return Math.max(0, value);
+        }
+
         get y() {
             return this.sprite.y;
         }
     }
 
     class Player extends Entity {
-        constructor(spawn) {
-            super(spawn.x, spawn.y, 100, 1, DIRECTION.RIGHT, 'player');
+        constructor(x, y) {
+            super(x, y, 100, 1, DIRECTION.RIGHT, 'player');
         }
 
         update(enemies) {
@@ -380,8 +437,8 @@
     }
 
     class Enemy extends Entity {
-        constructor(spawn, max) {
-            super(spawn.x + getRandomArbitrary(-TILE_SIZE, TILE_SIZE), spawn.y, max, 0.5, DIRECTION.LEFT, 'enemy');
+        constructor(x, y, max) {
+            super(x, y, max, 0.5, DIRECTION.LEFT, 'enemy');
             this.timer_flag = false;
         }
 
