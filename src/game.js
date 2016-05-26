@@ -83,14 +83,21 @@
         }
 
         initScreens() {
-            this.loseText = new PIXI.Text('', {font: "12px Arial", fill: 0xFFFFFF, dropShadow: true, align: "center"});
+            this.loseText = new PIXI.Text('', {font: "12px Arial", fill: 0xFFFFFF, dropShadow: true, dropShadowDistance: 3, align: "center"});
             this.loseText.position.x = -TILE_SIZE * 3;
             this.loseText.position.y = TILE_SIZE;
 
             this.scoreText = new PIXI.Text('0', {font: "12px Arial", fill: 0xFFFFFF, dropShadow: true, dropShadowDistance: 2, align: "left"});
 
+            this.pauseText = new PIXI.Text('Paused', {font: "12px Arial", fill: 0xFFFFFF, dropShadow: true, dropShadowDistance: 2, align: "left"});
+            this.pauseText.anchor.x = 0.5;
+            this.pauseText.anchor.y = 0.5;
+            this.pauseText.position.x = TILE_SIZE * 3;
+            this.pauseText.position.y = RENDER_HEIGHT / 2 / ZOOM;
+
             this.screenMap.get('menu').addChild(this.loseText);
             this.screenMap.get('menu').addChild(this.scoreText);
+            this.screenMap.get('menu').addChild(this.pauseText);
 
             // ... Menu code...
             this.screenMap.get('main').addChild(this.screenMap.get('menu'));
@@ -124,10 +131,15 @@
                             case(82):
                                 this.reset();
                                 return;
+                            case(13):
+                                e.preventDefault();
+                                this.paused = !this.paused;
+                                return;
                             case(65):
                             case(68):
+                            case(32):
                                 e.preventDefault();
-                                if(!this.player.isAlive || this.player.moving) {
+                                if(!this.player.isAlive || this.player.moving || this.paused) {
                                     return;
                                 }
                                 else {
@@ -149,6 +161,8 @@
                                 e.preventDefault();
                                 this.player.punch();
                                 break;
+                                case(13):
+                                    e.preventDefault();
                         }
 
                         this.player.move();
@@ -194,12 +208,18 @@
                 }
             }
 
-            this.screenMap.get('menu').position.x = Math.max(0, this.player.x);
-            this.scoreText.position.x = (TILE_SIZE * TILE_VIEW / 2) - (`${this.player.kills}`.length * 12);
+            // Follow the player
+            // Choose the cneter based on if the player is at the leftmost edge or not.
+            this.screenMap.get('menu').position.x = Math.max(RENDER_WIDTH / ZOOM / 2 - TILE_SIZE / 2, this.player.x);
+            // Adjust for the amount of digits.
+            this.scoreText.position.x = (TILE_SIZE * TILE_VIEW / 2) - (`${this.player.kills}`.length * 6);
 
             this.scoreText.text = this.player.kills;
             this.loseText.text = `You lost!\nYou had ${this.player.kills} points.\nPress R to try again.`;
             this.loseText.visible = !this.player.isAlive;
+
+            this.pauseText.visible = this.paused;
+            console.log(this.paused);
 
             // Final step
             this.renderer.render(this.screenMap.get(this.currentScreen));
