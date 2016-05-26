@@ -3,7 +3,7 @@
 // Use self-closing anonymous function (using arrow-notation) to avoid flooding the 'namespace'
 (() => {
     const TILE_SIZE = 16;
-    const TILE_VIEW = 12;
+    const TILE_VIEW = 10;
     const MAP_HEIGHT = 5;
     const ZOOM = 4;
     var RENDER_WIDTH, RENDER_HEIGHT;
