@@ -42,18 +42,10 @@
             this.screenMap.set('win', new PIXI.Container());
             this.screenMap.set('credits', new PIXI.Container());
 
-            this.zones = new Array();
-            this.currentZone = 0;
-
-            let main =this.screenMap.get('main');
-            main.scale.x = ZOOM;
-            main.scale.y = ZOOM;
+            this.screenMap.get('main').scale.x = ZOOM;
+            this.screenMap.get('main').scale.y = ZOOM;
 
             this.paused = false;
-            // ... Menu code...
-
-            main.addChild(this.screenMap.get('menu'));
-
 
             PIXI.SCALE_MODES.DEFAULT = PIXI.SCALE_MODES.NEAREST;
             PIXI.loader
@@ -61,101 +53,153 @@
                 .add('tiles', 'assets/img/tiles/tiles.png')
                 .add('assets/assets.json')
                 .load(() => {
-                    this.world = new PIXI.Container();
+                    this.load(render);
+                });
+        }
 
-                    this.zoneContainer = new PIXI.Container();
-                    this.entityContainer = new PIXI.Container();
+        load(render) {
+            this.initScreens();
+            this.initWorld();
+            this.initKeyHandlers();
 
-                    this.world.addChild(this.zoneContainer);
-                    this.world.addChild(this.entityContainer);
+            // Initialize render loop
+            render();
+        }
 
-                    this.addZone();
-                    let spawn = this.zones[0].getObject('player_spawn');
-                    this.player = new Player(spawn.x, spawn.y);
-                    this.entityContainer.addChild(this.player.sprite);
+        reset() {
+            this.entityContainer.removeChildren();
 
-                    main.addChild(this.world);
+            this.currentZone = 0;
+            this.zones = new Array();
 
-                    this.enemies = new Array();
+            this.enemies = new Array();
 
-                    document.addEventListener('keydown', e => {
-                        switch(this.currentScreen) {
-                            case('main'):
-                                switch(e.keyCode) {
-                                    case(82):
-                                        this.reset();
-                                        return;
-                                    case(65):
-                                    case(68):
-                                        e.preventDefault();
-                                        if(!this.player.isAlive || this.player.moving) {
-                                            return;
-                                        }
-                                        else {
-                                            this.player.move_dir = MOVE_DIR.NONE;
-                                        }
+            this.addZone();
+            let spawn = this.zones[0].getObject('player_spawn');
+            this.player = new Player(spawn.x, spawn.y);
+            this.entityContainer.addChild(this.player.sprite);
+
+            this.loseText.visible = false;
+        }
+
+        initScreens() {
+            this.loseText = new PIXI.Text('', {font: "12px Arial", fill: 0xFFFFFF, dropShadow: true, align: "center"});
+            this.loseText.position.x = -TILE_SIZE * 3;
+            this.loseText.position.y = TILE_SIZE;
+
+            this.scoreText = new PIXI.Text('0', {font: "12px Arial", fill: 0xFFFFFF, dropShadow: true, dropShadowDistance: 2, align: "left"});
+
+            this.screenMap.get('menu').addChild(this.loseText);
+            this.screenMap.get('menu').addChild(this.scoreText);
+
+            // ... Menu code...
+            this.screenMap.get('main').addChild(this.screenMap.get('menu'));
+        }
+
+        initWorld() {
+            this.world = new PIXI.Container();
+            this.zones = new Array();
+            this.enemies = new Array();
+
+            this.currentZone = 0;
+            this.zoneContainer = new PIXI.Container();
+            this.entityContainer = new PIXI.Container();
+
+            this.world.addChild(this.zoneContainer);
+            this.world.addChild(this.entityContainer);
+
+            this.addZone();
+            let spawn = this.zones[0].getObject('player_spawn');
+            this.player = new Player(spawn.x, spawn.y);
+            this.entityContainer.addChild(this.player.sprite);
+
+            this.screenMap.get('main').addChildAt(this.world, 0);
+        }
+
+        initKeyHandlers() {
+            document.addEventListener('keydown', e => {
+                switch(this.currentScreen) {
+                    case('main'):
+                        switch(e.keyCode) {
+                            case(82):
+                                this.reset();
+                                return;
+                            case(65):
+                            case(68):
+                                e.preventDefault();
+                                if(!this.player.isAlive || this.player.moving) {
+                                    return;
                                 }
-
-                                switch(e.keyCode) {
-                                    // A
-                                    case(65):
-                                        this.player.move_dir = MOVE_DIR.LEFT;
-                                        break;
-                                    // D
-                                    case(68):
-                                        this.player.move_dir = MOVE_DIR.RIGHT;
-                                        break;
-                                    // Space
-                                    case(32):
-                                        e.preventDefault();
-                                        this.player.punch();
-                                        break;
+                                else {
+                                    this.player.move_dir = MOVE_DIR.NONE;
                                 }
-
-                                this.player.move();
-                                break;
                         }
-                    });
 
-                    document.addEventListener('keyup', e => {
                         switch(e.keyCode) {
                             // A
                             case(65):
+                                this.player.move_dir = MOVE_DIR.LEFT;
+                                break;
                             // D
                             case(68):
-                                this.player.move_dir = MOVE_DIR.NONE;
+                                this.player.move_dir = MOVE_DIR.RIGHT;
                                 break;
                             // Space
                             case(32):
                                 e.preventDefault();
+                                this.player.punch();
+                                break;
                         }
-                    });
 
-                    // Initialize render loop
-                    render();
-                });
+                        this.player.move();
+                        break;
+                }
+            });
+
+            document.addEventListener('keyup', e => {
+                switch(e.keyCode) {
+                    // A
+                    case(65):
+                    // D
+                    case(68):
+                        this.player.move_dir = MOVE_DIR.NONE;
+                        break;
+                    // Space
+                    case(32):
+                        e.preventDefault();
+                }
+            });
         }
 
         update() {
-            this.moveCamera();
-            this.player.update(this.enemies);
-            for(let enemy of this.enemies) {
-                if(!enemy.isAlive) {
-                    this.entityContainer.removeChild(enemy.sprite);
+            if(!this.paused) {
+                this.moveCamera();
+                this.player.update(this.enemies);
+                for(let enemy of this.enemies) {
+                    if(!enemy.isAlive) {
+                        this.entityContainer.removeChild(enemy.sprite);
+                    }
+                }
+                let count = this.enemies.length;
+                this.enemies = this.enemies.filter(enemy => enemy.isAlive);
+                this.player.kills += count - this.enemies.length;
+                for(let enemy of this.enemies) {
+                    enemy.update(this.player);
+                }
+
+                let zone = this.getZone();
+                if(this.player.x > 0 && !this.zones[zone].entered) {
+                    this.zones[zone].entered = true;
+                    this.addZone();
                 }
             }
-            let count = this.enemies.length;
-            this.enemies = this.enemies.filter(enemy => enemy.isAlive);
-            this.player.kills += count - this.enemies.length;
-            for(let enemy of this.enemies) {
-                enemy.update(this.player);
-            }
 
-            let zone = this.getZone();
-            if(this.player.x > 0 && !this.zones[zone].entered) {
-                this.zones[zone].entered = true;
-                this.addZone();
-            }
+            this.screenMap.get('menu').position.x = Math.max(0, this.player.x);
+            this.scoreText.position.x = (TILE_SIZE * TILE_VIEW / 2) - (`${this.player.kills}`.length * 12);
+
+            this.scoreText.text = this.player.kills;
+            this.loseText.text = `You lost!\nYou had ${this.player.kills} points.\nPress R to try again.`;
+            this.loseText.visible = !this.player.isAlive;
 
             // Final step
             this.renderer.render(this.screenMap.get(this.currentScreen));
@@ -180,32 +224,16 @@
                 this.enemies.push(enemy);
                 this.entityContainer.addChild(enemy.sprite);
             }
-
-
         }
 
         moveCamera() {
-            let x = -this.player.sprite.x * ZOOM + RENDER_WIDTH / 2 - this.player.sprite.width / 2 * ZOOM;
+            let x = -this.player.x * ZOOM + RENDER_WIDTH / 2 - this.player.sprite.width / 2 * ZOOM;
 
-            this.screenMap.get('main').x = -Math.max(0, -x);
+            this.screenMap.get('main').position.x = -Math.max(0, -x);
         }
 
         getZone() {
             return Math.floor(this.player.x / this.zones[0].worldWidth);
-        }
-
-        reset() {
-            this.entityContainer.removeChildren();
-
-            this.currentZone = 0;
-            this.zones = new Array();
-
-            this.enemies = new Array();
-
-            this.addZone();
-            let spawn = this.zones[0].getObject('player_spawn');
-            this.player = new Player(spawn.x, spawn.y);
-            this.entityContainer.addChild(this.player.sprite);
         }
     }
 
@@ -221,7 +249,8 @@
             this.direction = dir;
             this.hasDied = false;
 
-            this.tinted = false;
+            this.flashInit = false;
+            this.flash = false;
 
             this.sprite = new PIXI.Container();
             this.sprite.x = x;
@@ -334,11 +363,32 @@
                 for(let dir in DIRECTION) {
                     for(let state in STATE) {
                         this.states[DIRECTION[dir]][STATE[state]].tint = 0xCC0000;
-                        window.setTimeout(() => {
-                            this.states[DIRECTION[dir]][STATE[state]].tint = 0xFFFFFF;
-                        }, 100);
                     }
                 }
+                window.setTimeout(() => {
+                    for(let dir in DIRECTION) {
+                        for(let state in STATE) {
+                            this.states[DIRECTION[dir]][STATE[state]].tint = 0xFFFFFF;
+                        }
+                    }
+                }, 100);
+            }
+            if(this.danger && !this.flashInit) {
+                this.flashInit = true;
+                window.setInterval(() => {
+                    this.flash = !this.flash;
+                    for(let dir in DIRECTION) {
+                        for(let state in STATE) {
+                            if(this.flash) {
+                                this.states[DIRECTION[dir]][STATE[state]].tint = 0xCC0000;
+                            }
+                            else {
+                                this.states[DIRECTION[dir]][STATE[state]].tint = 0xFFFFFF;
+                            }
+                        }
+                    }
+                }, 500);
+
             }
 
             if(!this.isAlive && !this.hasDied) {
@@ -361,7 +411,7 @@
         }
 
         get danger() {
-            return this.health / this.MAX_HEALTH <= 0.1;
+            return this.health / this.MAX_HEALTH <= 0.25;
         }
 
         getRelativeDir(other) {
@@ -483,7 +533,6 @@
                     this.timer_flag = true;
                     this.punch();
                     this.attack(player);
-                    console.log(player.health);
                     window.setTimeout(() => {
                         this.timer_flag = false;
                     }, 1000)
