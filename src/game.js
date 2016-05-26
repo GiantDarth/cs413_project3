@@ -54,9 +54,7 @@
                 .add('tiles', 'assets/img/tiles/tiles.png')
                 .add('assets/assets.json')
                 .load(() => {
-                    console.log('no')
                     this.world = tu.makeTiledWorld('zone_json', 'assets/img/tiles/tiles.png');
-                    console.log('yes')
                     main.addChild(this.world);
 
                     this.player = new Player(this.world.getObject('player_spawn'),
@@ -223,7 +221,7 @@
         follow(player) {
             this.direction = this.getRelativeDir(player);
 
-            move(Math.trunc(TILE_SIZE / 4));
+            move(1 / 4);
         }
     }
 
