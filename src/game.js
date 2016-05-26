@@ -3,16 +3,28 @@
 // Use self-closing anonymous function (using arrow-notation) to avoid flooding the 'namespace'
 (() => {
     const TILE_SIZE = 16;
-    const RENDER_HEIGHT = 480;
-    const RENDER_WIDTH = 640;
+    const TILE_VIEW = 12;
+    const MAP_HEIGHT = 5;
+    const ZOOM = 4;
+    var RENDER_WIDTH, RENDER_HEIGHT;
+
+    var tu = new TileUtilities(PIXI);
 
     // Only run when the document is fully loaded.
     document.addEventListener("DOMContentLoaded", (event) => {
-        let game = new Game();
+        let game = new Game(render);
+
+        function render() {
+            game.update();
+            requestAnimationFrame(render);
+        }
     }, false);
 
     class Game {
-        constructor() {
+        constructor(render) {
+            RENDER_HEIGHT = TILE_SIZE * ZOOM * MAP_HEIGHT;
+            RENDER_WIDTH = TILE_SIZE * ZOOM * TILE_VIEW;
+
             // Append renderer to gameport
             this.gameport = document.getElementById("gameport");
             this.renderer = PIXI.autoDetectRenderer(RENDER_WIDTH, RENDER_HEIGHT, { backgroundColor: 0x000000 });
@@ -31,34 +43,61 @@
 
             this.paused = false;
             // ... Menu code...
-            this.screenMap.get('main').addChild(this.screenMap.get('menu'));
+            let main =this.screenMap.get('main');
+            main.addChild(this.screenMap.get('menu'));
+            main.scale.x = ZOOM;
+            main.scale.y = ZOOM;
 
             PIXI.SCALE_MODES.DEFAULT = PIXI.SCALE_MODES.NEAREST;
-            PIXI.loader.add('assets/img/assets.json').load(() => {
-                this.player = new Player(x);
-                this.world;
+            PIXI.loader
+                .add('zone_json', 'assets/map/zone.json')
+                .add('tiles', 'assets/img/tiles/tiles.png')
+                .add('assets/assets.json')
+                .load(() => {
+                    console.log('no')
+                    this.world = tu.makeTiledWorld('zone_json', 'assets/img/tiles/tiles.png');
+                    console.log('yes')
+                    main.addChild(this.world);
 
-                document.addEventListener('keydown', (e) => {
-                    e.preventDefault();
-                    if(this.player.moving || e.repeat)
-                        return;
+                    this.player = new Player(this.world.getObject('player_spawn'),
+                        100, 1);
+                    this.world.addChild(this.player.sprite);
 
-                    this.player.direction = DIRECTION.NONE;
-                    switch(e.keyCode) {
-                        case(65):
-                            this.player.direction = DIRECTION.LEFT;
-                            break;
-                        case(68):
-                            this.player.direction = DIRECTION.RIGHT;
-                            break;
-                    }
+                    document.addEventListener('keydown', e => {
+                        switch(e.keyCode) {
+                            case(65):
+                            case(68):
+                                if(!this.player.isAlive || this.player.moving || e.repeat)
+                                    return;
+                        }
 
-                    this.player.move(TILE_SIZE);
+                        this.player.move_dir = DIRECTION.NONE;
+                        switch(e.keyCode) {
+                            case(65):
+                                e.preventDefault();
+                                this.player.move_dir = DIRECTION.LEFT;
+                                break;
+                            case(68):
+                                e.preventDefault();
+                                this.player.move_dir = DIRECTION.RIGHT;
+                                break;
+                        }
+
+                        this.player.move(1);
+                    });
+
+                    document.addEventListener('keyup', e => {
+                        switch(e.keyCode) {
+                            case(65):
+                            case(68):
+                                e.preventDefault();
+                        }
+                        this.player.move_dir = DIRECTION.NONE;
+                    });
+
+                    // Initialize render loop
+                    render();
                 });
-
-                // Initialize game loop
-                this.animate();
-            }
         }
 
         update() {
@@ -66,24 +105,21 @@
             this.renderer.render(this.screenMap.get(this.currentScreen));
         }
 
-        animate() {
-            this.update();
-            requestAnimationFrame(this.animate);
-        }
-
         moveCamera() {
-            let x = -player.sprite.x + RENDER_WIDTH / 2 - player.sprite.width / 2;
+            let x = -player.sprite.x * ZOOM + RENDER_WIDTH / 2 - player.sprite.width / 2 * ZOOM;
 
-            this.screenMap.get('main').x = -Match.max(0, Math.min(this.world.worldWidth - RENDER_WIDTH, -x));
+            this.screenMap.get('main').x = -Match.max(0, Math.min(this.world.worldWidth * ZOOM - RENDER_WIDTH, -x));
         }
     }
 
     // Abstract class
     class Entity {
-        constructor(max) {
+        constructor(max, speed) {
             this.moving = false;
+            this.speed = speed;
             this.MAX_HEALTH = max;
             this.health = this.MAX_HEALTH;
+            this.move_dir = DIRECTION.NONE;
             this.direction = DIRECTION.NONE;
         }
 
@@ -94,10 +130,10 @@
             }
         }
 
-        attack(other);
-        jump();
-        walk();
-        die();
+        attack(other) {};
+        jump() {};
+        walk() {};
+        die() {};
 
         get isAlive() {
             return this.health > 0;
@@ -107,7 +143,7 @@
             return this.health / this.MAX_HEALTH <= 0.1;
         }
 
-        get relative(other) {
+        getRelativeDir(other) {
             if(this.sprite.x < other.sprite.x) {
                 return DIRECTION.RIGHT;
             }
@@ -117,31 +153,40 @@
         }
 
         move(x) {
-            if(this.direction === DIRECTION.NONE) {
+            console.log(this.move_dir);
+            if(this.move_dir === DIRECTION.NONE) {
                 this.moving = false;
                 return;
             }
 
             this.moving = true;
-            switch(this.direction) {
+            switch(this.move_dir) {
                 case(DIRECTION.LEFT):
-                    createjs.Tween.get(this.sprite).to({x: player.sprite.x - x},
+                    createjs.Tween.get(this.sprite).to({x: this.sprite.x - x * this.speeed * TILE_SIZE},
                         500)
-                        .call(this.move);
+                        .call(this.move, [x]);
                     break;
                 case(DIRECTION.RIGHT):
-                    createjs.Tween.get(this.sprite).to({x: player.sprite.x + x},
+                    createjs.Tween.get(this.sprite).to({x: this.sprite.x + x * this.speed * TILE_SIZE},
                         500)
-                        .call(this.move);
+                        .call(this.move, [x]);
             }
         }
     }
 
     class Player extends Entity {
-        constructor() {
-            super();
+        constructor(spawn, max, speed) {
+            super(max, speed);
             // #TODO Load player sprite from frame
-            this.sprite = new PIXI.Sprite();
+            this.sprite = new PIXI.Container();
+            this.sprite.x = spawn.x;
+            this.sprite.y = spawn.y;
+
+            this.direction = DIRECTION.RIGHT;
+
+            this.stillAnim = new PIXI.Sprite(PIXI.Texture.fromFrame('player1.png'));
+            this.sprite.addChild(this.stillAnim);
+            let frames = new Array();
         }
 
         jump() {
@@ -163,9 +208,11 @@
     }
 
     class Enemy extends Entity {
-        constructor() {
+        constructor(enemy_spawn, max, speed) {
+            super(max, speed)
             // #TODO Load enemy sprite.
             this.sprite = new PIXI.Sprite();
+            this.direction = DIRECTION.LEFT;
         }
 
         // Override
@@ -174,7 +221,7 @@
         }
 
         follow(player) {
-            this.direction = this.relative(player);
+            this.direction = this.getRelativeDir(player);
 
             move(Math.trunc(TILE_SIZE / 4));
         }

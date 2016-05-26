@@ -1,15 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-up" width="20" height="5" tilewidth="16" tileheight="16" nextobjectid="1">
+<map version="1.0" orientation="orthogonal" renderorder="right-up" width="20" height="5" tilewidth="16" tileheight="16" nextobjectid="9">
  <tileset firstgid="1" name="map" tilewidth="16" tileheight="16" spacing="2" margin="2" tilecount="4" columns="2">
   <image source="../img/tiles/tiles.png" width="38" height="38"/>
  </tileset>
- <layer name="Tile Layer 1" width="20" height="5">
+ <layer name="sky" width="20" height="5">
   <data encoding="csv">
 1,1,1,2,2,1,1,1,2,1,1,1,1,1,2,2,1,1,1,2,
 1,2,1,1,1,1,2,2,1,2,1,1,2,1,1,1,2,1,2,1,
 1,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,2,1,
+1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+</data>
+ </layer>
+ <layer name="ground" width="20" height="5">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
 3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
 </data>
  </layer>
+ <objectgroup name="entities">
+  <object id="6" name="player_spawn" x="16" y="32" width="16" height="16"/>
+  <object id="7" name="enemy_spawn" x="256" y="32" width="16" height="16"/>
+ </objectgroup>
 </map>
