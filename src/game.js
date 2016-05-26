@@ -150,7 +150,7 @@
             }
         }
 
-        move(x) {
+        move() {
             console.log(this.move_dir);
             if(this.move_dir === DIRECTION.NONE) {
                 this.moving = false;
@@ -160,21 +160,21 @@
             this.moving = true;
             switch(this.move_dir) {
                 case(DIRECTION.LEFT):
-                    createjs.Tween.get(this.sprite).to({x: this.sprite.x - x * this.speeed * TILE_SIZE},
+                    createjs.Tween.get(this.sprite).to({x: this.sprite.x - this.speed * TILE_SIZE},
                         500)
-                        .call(this.move, [x]);
+                        .call(this.move);
                     break;
                 case(DIRECTION.RIGHT):
-                    createjs.Tween.get(this.sprite).to({x: this.sprite.x + x * this.speed * TILE_SIZE},
+                    createjs.Tween.get(this.sprite).to({x: this.sprite.x + this.speed * TILE_SIZE},
                         500)
-                        .call(this.move, [x]);
+                        .call(this.move);
             }
         }
     }
 
     class Player extends Entity {
-        constructor(spawn, max, speed) {
-            super(max, speed);
+        constructor(spawn) {
+            super(100, 1);
             // #TODO Load player sprite from frame
             this.sprite = new PIXI.Container();
             this.sprite.x = spawn.x;
@@ -206,8 +206,8 @@
     }
 
     class Enemy extends Entity {
-        constructor(enemy_spawn, max, speed) {
-            super(max, speed)
+        constructor(enemy_spawn, max) {
+            super(max, 1 / 4)
             // #TODO Load enemy sprite.
             this.sprite = new PIXI.Sprite();
             this.direction = DIRECTION.LEFT;
@@ -221,7 +221,7 @@
         follow(player) {
             this.direction = this.getRelativeDir(player);
 
-            move(1 / 4);
+            move();
         }
     }
 
