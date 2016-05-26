@@ -58,8 +58,7 @@
                     this.world = tu.makeTiledWorld('zone_json', 'assets/img/tiles/tiles.png');
                     main.addChild(this.world);
 
-                    this.player = new Player(this.world.getObject('player_spawn'),
-                        100, 1);
+                    this.player = new Player(this.world.getObject('player_spawn'));
                     this.world.addChild(this.player.sprite);
 
                     document.addEventListener('keydown', e => {
@@ -108,6 +107,12 @@
                         }
                     });
 
+                    this.enemies = new Array();
+                    for(let i = 0; i < 5; i++) {
+                        this.enemies.push(new Enemy(this.world.getObject('enemy_spawn'), 100));
+                        this.world.addChild(this.enemies[i].sprite);
+                    }
+
                     // Initialize render loop
                     render();
                 });
@@ -115,7 +120,16 @@
 
         update() {
             this.moveCamera();
-            this.player.update()
+            this.player.update(this.enemies);
+            for(let enemy of this.enemies) {
+                if(!enemy.isAlive) {
+                    this.world.removeChild(enemy.sprite);
+                }
+            }
+            this.enemies = this.enemies.filter(enemy => enemy.isAlive);
+            for(let enemy of this.enemies) {
+                enemy.update(this.player);
+            }
             // Final step
             this.renderer.render(this.screenMap.get(this.currentScreen));
         }
@@ -129,7 +143,7 @@
 
     // Abstract class
     class Entity {
-        constructor(spawn, max, speed, dir, file_pre) {
+        constructor(x, y, max, speed, dir, file_pre) {
             this.moving = false;
             this.punching = false;
             this.speed = speed;
@@ -137,10 +151,13 @@
             this.health = this.MAX_HEALTH;
             this.move_dir = DIRECTION.NONE;
             this.direction = dir;
+            this.hasDied = false;
+
+            this.tinted = false;
 
             this.sprite = new PIXI.Container();
-            this.sprite.x = spawn.x;
-            this.sprite.y = spawn.y;
+            this.sprite.x = x;
+            this.sprite.y = y;
 
             this.state = STATE.STILL;
             this.direction = DIRECTION.RIGHT;
@@ -204,15 +221,15 @@
 
         hurt(dmg) {
             this.health -= dmg;
-            if(!this.isAlive) {
-                this.die();
-            }
+            this.damaged = true;
         }
 
         attack(other) {};
         jump() {};
         walk() {};
-        die() {};
+        die() {
+            this.hasDied = true;
+        };
         update() {
             if(this.punching && this.state !== STATE.ATTACK) {
                 this.state = STATE.ATTACK;
@@ -243,9 +260,31 @@
                 this.states[this.direction][this.state].play();
                 this.punching = false;
             }
+
+            if(this.damaged) {
+                this.damaged = false;
+                for(let dir in DIRECTION) {
+                    for(let state in STATE) {
+                        this.states[DIRECTION[dir]][STATE[state]].tint = 0xCC0000;
+                        window.setTimeout(() => {
+                            this.states[DIRECTION[dir]][STATE[state]].tint = 0xFFFFFF;
+                        }, 100);
+                    }
+                }
+            }
+
+            if(!this.isAlive && !this.hasDied) {
+                this.die();
+            }
+
+            if(!this.isAlive && this.sprite.alpha > 0) {
+                this.sprite.alpha -= 0.05;
+            }
         };
 
         punch() {
+            if(this.punching)
+                return;
             this.punching = true;
         }
 
@@ -275,29 +314,51 @@
             this.moving = true;
             switch(this.move_dir) {
                 case(MOVE_DIR.LEFT):
-                    createjs.Tween.get(this.sprite).to({x: this.sprite.x - this.speed * TILE_SIZE},
-                        500)
+                    createjs.Tween.get(this.sprite).to({x: this.sprite.x - TILE_SIZE / 2},
+                        100 / this.speed)
                         .call(() => {
                             this.move();
                         });
                     break;
                 case(MOVE_DIR.RIGHT):
-                    createjs.Tween.get(this.sprite).to({x: this.sprite.x + this.speed * TILE_SIZE},
-                        500)
+                    createjs.Tween.get(this.sprite).to({x: this.sprite.x + TILE_SIZE / 2},
+                        100 / this.speed)
                         .call(() => {
                             this.move();
                         });
             }
         }
+
+        // Bounding box method.
+        collide(other) {
+            return Math.abs(this.x - other.x) < TILE_SIZE
+            && Math.abs(this.y - other.y) < TILE_SIZE;
+        }
+
+        get x() {
+            return this.sprite.x;
+        }
+
+        get y() {
+            return this.sprite.y;
+        }
     }
 
     class Player extends Entity {
         constructor(spawn) {
-            super(spawn, 100, 1.5, DIRECTION.RIGHT, 'player');
+            super(spawn.x, spawn.y, 100, 1, DIRECTION.RIGHT, 'player');
         }
 
-        update() {
+        update(enemies) {
             super.update();
+
+            if(this.punching) {
+                for(let enemy of enemies) {
+                    if(this.collide(enemy)) {
+                        this.attack(enemy);
+                    }
+                }
+            }
         }
 
         jump() {
@@ -314,28 +375,53 @@
 
         // Override
         attack(enemy) {
-            enemy.hurt(10);
+            enemy.hurt(25);
         }
     }
 
     class Enemy extends Entity {
-        constructor(enemy_spawn, max) {
-            super(enemy_spawn, max, 1 / 4, DIRECTION.LEFT, 'enemy');
+        constructor(spawn, max) {
+            super(spawn.x + getRandomArbitrary(-TILE_SIZE, TILE_SIZE), spawn.y, max, 0.5, DIRECTION.LEFT, 'enemy');
+            this.timer_flag = false;
         }
 
         // Override
         attack(player) {
-            player.hurt(5);
+            player.hurt(2);
         }
 
-        update() {
+        update(player) {
             super.update();
+
+            let isColliding = this.collide(player);
+            if(!this.moving && !isColliding) {
+                this.follow(player);
+            }
+            else {
+                this.move_dir = MOVE_DIR.NONE;
+                if(isColliding && !this.timer_flag && player.isAlive) {
+                    this.timer_flag = true;
+                    this.punch();
+                    this.attack(player);
+                    console.log(player.health);
+                    window.setTimeout(() => {
+                        this.timer_flag = false;
+                    }, 1000)
+                }
+            }
         }
 
         follow(player) {
-            this.direction = this.getRelativeDir(player);
+            switch(this.getRelativeDir(player)) {
+                case(DIRECTION.LEFT):
+                    this.move_dir = MOVE_DIR.LEFT;
+                    break;
+                case(DIRECTION.RIGHT):
+                    this.move_dir = MOVE_DIR.RIGHT;
+                    break;
+            }
 
-            move();
+            this.move();
         }
     }
 
@@ -354,6 +440,11 @@
     const DIRECTION = {
         LEFT: 0,
         RIGHT: 1
+    }
+
+    // Returns a random number between min (inclusive) and max (exclusive)
+    function getRandomArbitrary(min, max) {
+        return Math.random() * (max - min) + min;
     }
 
     function getRandomInt(min, max) {
