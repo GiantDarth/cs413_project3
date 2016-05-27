@@ -393,7 +393,7 @@
 
         spawnEnemies(zone) {
             let spawn = zone.getObject('enemy_spawn');
-            for(let i = 0; i < zone.zone; i++) {
+            for(let i = 0; i < zone.zone + 1; i++) {
                 let enemy = new Enemy(spawn.x + zone.x + getRandomArbitrary(-TILE_SIZE * 2, TILE_SIZE * 2), spawn.y, 100);
                 this.enemies.push(enemy);
                 this.entityContainer.addChild(enemy.sprite);
