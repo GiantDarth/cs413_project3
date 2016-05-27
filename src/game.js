@@ -26,7 +26,7 @@
             RENDER_HEIGHT = TILE_SIZE * ZOOM * MAP_HEIGHT;
             RENDER_WIDTH = TILE_SIZE * ZOOM * TILE_VIEW;
 
-            this.title = "Beat-'em-All";
+            this.title = "Beat-'em-All!";
 
             // Append renderer to gameport
             this.gameport = document.getElementById("gameport");
