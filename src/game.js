@@ -213,6 +213,11 @@
 
         initKeyHandlers() {
             document.addEventListener('keydown', e => {
+                // M
+                if(e.keyCode === 77) {
+                    this.titleMusic.muted = !this.titleMusic.muted;
+                    this.backMusic.muted = !this.backMusic.muted;
+                }
                 switch(this.currentScreen) {
                     case('title'):
                         let old = this.currentOption;
@@ -231,10 +236,6 @@
                                 if(this.currentOption !== old) {
                                     this.selectSnd.play();
                                 }
-                                break;
-                            // M
-                            case(77):
-                                this.titleMusic.muted = !this.titleMusic.muted;
                                 break;
                             // Space
                             case(32):
@@ -277,10 +278,6 @@
                             case(82):
                                 this.reset();
                                 return;
-                            // M
-                            case(77):
-                                this.backMusic.muted = !this.backMusic.muted;
-                                break;
                             // Enter
                             case(13):
                                 e.preventDefault();
