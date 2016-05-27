@@ -40,7 +40,6 @@
             this.screenMap.set('tutorial', new PIXI.Container());
             this.screenMap.set('main', new PIXI.Container());
             this.screenMap.set('menu', new PIXI.Container());
-            this.screenMap.set('lose', new PIXI.Container());
             this.screenMap.set('credits', new PIXI.Container());
 
             this.screenMap.get('main').scale.x = ZOOM;
@@ -70,7 +69,6 @@
             this.initWorld();
             this.initKeyHandlers();
 
-            console.log(this.selectSnd.volume);
             this.selectSnd.volume = 0.15;
 
             this.titleMusic.loop = true;
@@ -127,6 +125,44 @@
             container.addChild(titleBox);
             container.addChild(optBox);
             this.screenMap.get('title').addChild(container);
+
+            // Credits Screen
+            let creditsTitle = new PIXI.Text('Credits', {font: "42px Consolas", fill: 0xFFFFFF, align: "center"});
+            creditsTitle.anchor.x = 0.5;
+
+            let credits = [
+                'Creator: Christopher Philabaum',
+                'Sound Design: Christopher Philabaum',
+                'Music: Christopher Philabaum',
+                'Art: Christopher Philabaum',
+            ];
+            let creditsText = new PIXI.Text(credits.join('\n'), {font: "32px Consolas", fill: 0xFFFFFF, align: "center"});
+            creditsText.anchor.x = 0.5;
+            creditsText.position.y = creditsTitle.height + 16;
+
+            let toolsTitle = new PIXI.Text('Tools Used', {font: "36px Consolas", fill: 0xFFFFFF, align: "center"});
+            toolsTitle.anchor.x = 0.5;
+            toolsTitle.position.y = creditsTitle.height + creditsText.height + 16 + 32;
+            let tools = [
+                'Pixijs',
+                'Pixi-Audio',
+                'TweenJS',
+                'tileUtilies',
+                'Bfxr',
+                'Bosca Ceoil',
+                'fre:ac',
+                'Atom'
+            ]
+            let toolsText = new PIXI.Text(tools.join('\n'), {font: "32px Consolas", fill: 0xFFFFFF, align: "center"});
+            toolsText.anchor.x = 0.5;
+            toolsText.position.y = creditsTitle.height + creditsText.height + toolsTitle.height + 16 + 32 + 16;
+
+            this.screenMap.get('credits').addChild(creditsTitle);
+            this.screenMap.get('credits').addChild(creditsText);
+            this.screenMap.get('credits').addChild(toolsTitle);
+            this.screenMap.get('credits').addChild(toolsText);
+
+            this.screenMap.get('credits').x = RENDER_WIDTH / 2;
 
             // Menu Screen
             this.loseText = new PIXI.Text('', {font: "12px Arial", fill: 0xFFFFFF, dropShadow: true, dropShadowDistance: 3, align: "center"});
@@ -196,6 +232,15 @@
                                 switch(this.currentOption) {
                                     case(1):
                                         this.currentScreen = 'credits';
+                                        // Reset selection
+                                        this.currentOption = 0;
+                                        this.screenMap.get('credits').y = this.screenMap.get('credits').height;
+                                        // Scroll up the credits to its height's length for 15 seconds.
+                                        createjs.Tween.get(this.screenMap.get('credits')).to({y: -this.screenMap.get('credits').height},
+                                            15000)
+                                            .call(() => {
+                                                this.currentScreen = 'title';
+                                            });
                                         return;
                                     case(0):
                                     default:
@@ -262,6 +307,9 @@
                         this.player.move();
                         break;
                     case('credits'):
+                        this.currentScreen = 'title';
+                        // Remove tween of credits.
+                        createjs.Tween.removeTweens(this.screenMap.get('credits'));
                         break;
                 }
             });
@@ -277,9 +325,6 @@
                     // Space
                     case(32):
                         e.preventDefault();
-                        // if(this.currentScreen === 'main' && !this.paused && this.player.isAlive) {
-                        //     this.player.punchSnd.play();
-                        // }
                 }
             });
         }
@@ -562,13 +607,6 @@
                 this.moving = false;
                 return;
             }
-
-            // if(this.x < 0) {
-            //     this.x = TILE_SIZE;
-            //     this.moving = false;
-            //     this.move_dir = MOVE_DIR.NONE;
-            //     return;
-            // }
 
             this.moving = true;
             switch(this.move_dir) {
