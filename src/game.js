@@ -232,6 +232,10 @@
                                     this.selectSnd.play();
                                 }
                                 break;
+                            // M
+                            case(77):
+                                this.titleMusic.muted = !this.titleMusic.muted;
+                                break;
                             // Space
                             case(32):
                             // Enter
@@ -259,6 +263,7 @@
                                         return;
                                 }
                         }
+                        break;
                     case('main'):
                         switch(e.keyCode) {
                             // Esc
@@ -272,6 +277,10 @@
                             case(82):
                                 this.reset();
                                 return;
+                            // M
+                            case(77):
+                                this.backMusic.muted = !this.backMusic.muted;
+                                break;
                             // Enter
                             case(13):
                                 e.preventDefault();
