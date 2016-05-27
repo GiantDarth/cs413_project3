@@ -497,7 +497,6 @@
 
         attack(other) {};
         jump() {};
-        walk() {};
         die() {
             this.hasDied = true;
             this.deathSnd.play();
@@ -649,24 +648,31 @@
         constructor(x, y) {
             super(x, y, 100, 1, DIRECTION.RIGHT, 'player');
             this.kills = 0;
+            this.attacking = false;
             this.punchSnd = PIXI.audioManager.getAudio('punch');
         }
 
         update(enemies) {
             super.update();
 
-            if(this.punching) {
+            if(this.attacking) {
                 for(let enemy of enemies) {
                     if(this.collide(enemy)) {
                         this.attack(enemy);
                     }
                 }
+                this.attacking = false;
             }
+        }
+
+        punch() {
+            super.punch();
+            this.attacking = true;
         }
 
         // Override
         attack(enemy) {
-            enemy.hurt(25);
+            enemy.hurt(50);
         }
     }
 
