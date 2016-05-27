@@ -56,6 +56,7 @@
                 .add('death', 'assets/snd/death.mp3')
                 .add('select', 'assets/snd/select.mp3')
                 .add('title_mus', 'assets/snd/title_mus.mp3')
+                .add('back_mus', 'assets/snd/back_mus.mp3')
                 .load(() => {
                     this.load(render);
                 });
@@ -64,6 +65,7 @@
         load(render) {
             this.selectSnd = PIXI.audioManager.getAudio('select');
             this.titleMusic = PIXI.audioManager.getAudio('title_mus');
+            this.backMusic = PIXI.audioManager.getAudio('back_mus');
 
             this.initScreens();
             this.initWorld();
@@ -71,8 +73,11 @@
 
             this.selectSnd.volume = 0.15;
 
+            this.backMusic.loop = true;
+            this.backMusic.volume = 0.3;
+
             this.titleMusic.loop = true;
-            this.titleMusic.volume = 0.5;
+            this.titleMusic.volume = 0.3;
             this.titleMusic.play();
 
             // Initialize render loop
@@ -248,6 +253,7 @@
                                     default:
                                         this.paused = false;
                                         this.titleMusic.stop();
+                                        this.backMusic.play();
                                         this.reset();
                                         this.currentScreen = 'main';
                                         return;
@@ -259,6 +265,8 @@
                             case(27):
                                 this.paused = true;
                                 this.currentScreen = 'title';
+                                this.backMusic.paused = false;
+                                this.backMusic.stop();
                                 this.titleMusic.play();
                             // R
                             case(82):
@@ -355,6 +363,10 @@
                     this.zones[zone].entered = true;
                     this.addZone();
                 }
+            }
+
+            if(this.currentScreen === 'main') {
+                this.backMusic.paused = this.paused;
             }
 
             // Result all tints.
