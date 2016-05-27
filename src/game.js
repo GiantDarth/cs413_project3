@@ -323,9 +323,11 @@
                         this.player.move();
                         break;
                     case('credits'):
-                        this.currentScreen = 'title';
-                        // Remove tween of credits.
-                        createjs.Tween.removeTweens(this.screenMap.get('credits'));
+                        if(e.keyCode !== 77) {
+                            this.currentScreen = 'title';
+                            // Remove tween of credits.
+                            createjs.Tween.removeTweens(this.screenMap.get('credits'));
+                        }
                         break;
                 }
             });
