@@ -93,6 +93,8 @@
             this.entityContainer.addChild(this.player.sprite);
 
             this.loseText.visible = false;
+
+            this.paused = false;
         }
 
         initScreens() {
