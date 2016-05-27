@@ -626,9 +626,9 @@
         }
 
         // Bounding box method.
-        collide(other) {
-            return Math.abs(this.x - other.x) < TILE_SIZE
-            && Math.abs(this.y - other.y) < TILE_SIZE;
+        collide(other, range = 1) {
+            return Math.abs(this.x - other.x) < TILE_SIZE * range
+            && Math.abs(this.y - other.y) < TILE_SIZE * range;
         }
 
         get x() {
@@ -657,7 +657,7 @@
 
             if(this.attacking) {
                 for(let enemy of enemies) {
-                    if(this.collide(enemy)) {
+                    if(this.collide(enemy, 1)) {
                         this.attack(enemy);
                     }
                 }
@@ -690,7 +690,7 @@
         update(player) {
             super.update();
 
-            let isColliding = this.collide(player);
+            let isColliding = this.collide(player, 0.75);
             if(!this.moving && !isColliding) {
                 this.follow(player);
             }
