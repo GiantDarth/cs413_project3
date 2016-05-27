@@ -26,6 +26,8 @@
             RENDER_HEIGHT = TILE_SIZE * ZOOM * MAP_HEIGHT;
             RENDER_WIDTH = TILE_SIZE * ZOOM * TILE_VIEW;
 
+            this.title = "Infinite Beat-'em-up";
+
             // Append renderer to gameport
             this.gameport = document.getElementById("gameport");
             this.renderer = PIXI.autoDetectRenderer(RENDER_WIDTH, RENDER_HEIGHT, { backgroundColor: 0x000000 });
@@ -33,31 +35,35 @@
 
             // Add screens
             this.screenMap = new Map();
-            this.currentScreen = 'main';
+            this.currentScreen = 'title';
             this.screenMap.set('title', new PIXI.Container());
             this.screenMap.set('tutorial', new PIXI.Container());
             this.screenMap.set('main', new PIXI.Container());
             this.screenMap.set('menu', new PIXI.Container());
             this.screenMap.set('lose', new PIXI.Container());
-            this.screenMap.set('win', new PIXI.Container());
             this.screenMap.set('credits', new PIXI.Container());
 
             this.screenMap.get('main').scale.x = ZOOM;
             this.screenMap.get('main').scale.y = ZOOM;
 
-            this.paused = false;
+            this.paused = true;
 
             PIXI.SCALE_MODES.DEFAULT = PIXI.SCALE_MODES.NEAREST;
             PIXI.loader
                 .add('zone_json', 'assets/map/zone.json')
                 .add('tiles', 'assets/img/tiles/tiles.png')
                 .add('assets/assets.json')
+                .add('punch', 'assets/snd/punch.mp3')
+                .add('death', 'assets/snd/death.mp3')
+                .add('select', 'assets/snd/select.mp3')
                 .load(() => {
                     this.load(render);
                 });
         }
 
         load(render) {
+            this.selectSnd = PIXI.audioManager.getAudio('select');
+
             this.initScreens();
             this.initWorld();
             this.initKeyHandlers();
@@ -83,6 +89,37 @@
         }
 
         initScreens() {
+            // Title Screen
+            this.options = ['New Game', 'Credits'];
+            this.currentOption = 0;
+            this.optTexts = new Array();
+            let container = new PIXI.Container();
+
+            let titleBox = new PIXI.Container();
+            let titleText = new PIXI.Text(this.title, {font: "42px Consolas", fill: 0xFFFFFF, align: "center"});
+            titleText.anchor.x = 0.5;
+            titleBox.addChild(titleText);
+            titleBox.y = 32;
+
+            let optBox = new PIXI.Container();
+            optBox.y = titleBox.y + titleBox.height + 32;
+            let height = 0;
+            for(let opt of this.options) {
+                let text = new PIXI.Text(opt, {font: "36px Consolas", fill: 0xFFFFFF, align: "center"});
+                text.y = height;
+                text.anchor.x = 0.5;
+                height += 42;
+                text.selected = false;
+                this.optTexts.push(text);
+                optBox.addChild(text);
+            }
+
+            container.x = RENDER_WIDTH / 2;
+            container.addChild(titleBox);
+            container.addChild(optBox);
+            this.screenMap.get('title').addChild(container);
+
+            // Menu Screen
             this.loseText = new PIXI.Text('', {font: "12px Arial", fill: 0xFFFFFF, dropShadow: true, dropShadowDistance: 3, align: "center"});
             this.loseText.position.x = -TILE_SIZE * 3;
             this.loseText.position.y = TILE_SIZE;
@@ -99,7 +136,6 @@
             this.screenMap.get('menu').addChild(this.scoreText);
             this.screenMap.get('menu').addChild(this.pauseText);
 
-            // ... Menu code...
             this.screenMap.get('main').addChild(this.screenMap.get('menu'));
         }
 
@@ -126,17 +162,60 @@
         initKeyHandlers() {
             document.addEventListener('keydown', e => {
                 switch(this.currentScreen) {
+                    case('title'):
+                        let old = this.currentOption;
+                        switch(e.keyCode){
+                            // W
+                            case(83):
+                                this.currentOption = Math.min(this.currentOption + 1, this.options.length - 1);
+                                if(this.currentOption !== old) {
+                                    this.selectSnd.play();
+                                }
+                                break;
+                            // S
+                            case(87):
+                                old = this.currentOption;
+                                this.currentOption = Math.max(this.currentOption - 1, 0);
+                                if(this.currentOption !== old) {
+                                    this.selectSnd.play();
+                                }
+                                break;
+                            // Space
+                            case(32):
+                            // Enter
+                            case(13):
+                                switch(this.currentOption) {
+                                    case(1):
+                                        this.currentScreen = 'credits';
+                                        return;
+                                    case(0):
+                                    default:
+                                        this.paused = false;
+                                        this.reset();
+                                        this.currentScreen = 'main';
+                                        return;
+                                }
+                        }
                     case('main'):
                         switch(e.keyCode) {
+                            // Esc
+                            case(27):
+                                this.paused = true;
+                                this.currentScreen = 'title';
+                            // R
                             case(82):
                                 this.reset();
                                 return;
+                            // Enter
                             case(13):
                                 e.preventDefault();
                                 this.paused = !this.paused;
                                 return;
+                            // A
                             case(65):
+                            // D
                             case(68):
+                            // Space
                             case(32):
                                 e.preventDefault();
                                 if(!this.player.isAlive || this.player.moving || this.paused) {
@@ -160,12 +239,18 @@
                             case(32):
                                 e.preventDefault();
                                 this.player.punch();
+                                if(this.currentScreen === 'main' && !this.paused && this.player.isAlive) {
+                                    this.player.punchSnd.play();
+                                }
                                 break;
-                                case(13):
-                                    e.preventDefault();
+                            // Enter
+                            case(13):
+                                e.preventDefault();
                         }
 
                         this.player.move();
+                        break;
+                    case('credits'):
                         break;
                 }
             });
@@ -181,6 +266,9 @@
                     // Space
                     case(32):
                         e.preventDefault();
+                        // if(this.currentScreen === 'main' && !this.paused && this.player.isAlive) {
+                        //     this.player.punchSnd.play();
+                        // }
                 }
             });
         }
@@ -192,10 +280,13 @@
                 for(let enemy of this.enemies) {
                     if(!enemy.isAlive) {
                         this.entityContainer.removeChild(enemy.sprite);
+                        enemy.die();
                     }
                 }
                 let count = this.enemies.length;
+                // Only return enemies that are still alive.
                 this.enemies = this.enemies.filter(enemy => enemy.isAlive);
+                // Add the difference between the old list and the new list.
                 this.player.kills += count - this.enemies.length;
                 for(let enemy of this.enemies) {
                     enemy.update(this.player);
@@ -208,6 +299,12 @@
                 }
             }
 
+            // Result all tints.
+            for(let opt of this.optTexts) {
+                opt.tint = 0xFFFFFF;
+            }
+            this.optTexts[this.currentOption].tint = 0xCCAA00;
+
             // Follow the player
             // Choose the cneter based on if the player is at the leftmost edge or not.
             this.screenMap.get('menu').position.x = Math.max(RENDER_WIDTH / ZOOM / 2 - TILE_SIZE / 2, this.player.x);
@@ -219,7 +316,6 @@
             this.loseText.visible = !this.player.isAlive;
 
             this.pauseText.visible = this.paused;
-            console.log(this.paused);
 
             // Final step
             this.renderer.render(this.screenMap.get(this.currentScreen));
@@ -271,6 +367,8 @@
 
             this.flashInit = false;
             this.flash = false;
+
+            this.deathSnd = PIXI.audioManager.getAudio('death');
 
             this.sprite = new PIXI.Container();
             this.sprite.x = x;
@@ -346,7 +444,9 @@
         walk() {};
         die() {
             this.hasDied = true;
+            this.deathSnd.play();
         };
+
         update() {
             if(this.punching && this.state !== STATE.ATTACK) {
                 this.state = STATE.ATTACK;
@@ -378,6 +478,7 @@
                 this.punching = false;
             }
 
+            // If the entity was hit, flash them red once.
             if(this.damaged) {
                 this.damaged = false;
                 for(let dir in DIRECTION) {
@@ -393,6 +494,7 @@
                     }
                 }, 100);
             }
+            // Flash on-and-off when the entities health is in danger status.
             if(this.danger && !this.flashInit) {
                 this.flashInit = true;
                 window.setInterval(() => {
@@ -411,12 +513,13 @@
 
             }
 
-            if(!this.isAlive && !this.hasDied) {
-                this.die();
-            }
-
-            if(!this.isAlive && this.sprite.alpha > 0) {
-                this.sprite.alpha -= 0.05;
+            if(!this.isAlive) {
+                if(!this.hasDied) {
+                    this.die();
+                }
+                if(this.sprite.alpha > 0) {
+                    this.sprite.alpha -= 0.05;
+                }
             }
         };
 
@@ -497,6 +600,7 @@
         constructor(x, y) {
             super(x, y, 100, 1, DIRECTION.RIGHT, 'player');
             this.kills = 0;
+            this.punchSnd = PIXI.audioManager.getAudio('punch');
         }
 
         update(enemies) {
@@ -509,18 +613,6 @@
                     }
                 }
             }
-        }
-
-        jump() {
-            // #TODO Is this necessary?
-        }
-
-        walk() {
-            // #TODO Walk cycle animation
-        }
-
-        die() {
-            // #TODO Death animation
         }
 
         // Override
