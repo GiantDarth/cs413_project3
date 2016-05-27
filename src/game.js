@@ -470,17 +470,19 @@
             frames = new Array();
             for(let f = 11; f <= 12; f++) {
                 frames.push(PIXI.Texture.fromFrame(`${file_pre}${f}.png`));
+                frames.push(PIXI.Texture.fromFrame(`${file_pre}${f}.png`));
             }
             this.states[DIRECTION.RIGHT][STATE.ATTACK] = new PIXI.extras.MovieClip(frames);
-            this.states[DIRECTION.RIGHT][STATE.ATTACK].animationSpeed = 0.1;
+            this.states[DIRECTION.RIGHT][STATE.ATTACK].animationSpeed = 0.15;
             this.states[DIRECTION.RIGHT][STATE.ATTACK].loop = false;
 
             frames = new Array();
             for(let f = 13; f <= 14; f++) {
                 frames.push(PIXI.Texture.fromFrame(`${file_pre}${f}.png`));
+                frames.push(PIXI.Texture.fromFrame(`${file_pre}${f}.png`));
             }
             this.states[DIRECTION.LEFT][STATE.ATTACK] = new PIXI.extras.MovieClip(frames);
-            this.states[DIRECTION.LEFT][STATE.ATTACK].animationSpeed = 0.1;
+            this.states[DIRECTION.LEFT][STATE.ATTACK].animationSpeed = 0.15;
             this.states[DIRECTION.RIGHT][STATE.ATTACK].loop = false;
 
             for(let dir in DIRECTION) {
@@ -525,8 +527,10 @@
 
             for(let dir in DIRECTION) {
                 this.direction_containers[DIRECTION[dir]].visible = DIRECTION[dir] === this.direction;
-                for(let state in STATE) {
-                    this.states[DIRECTION[dir]][STATE[state]].visible = STATE[state] === this.state;
+                if(!this.states[this.direction][STATE.ATTACK].playing) {
+                    for(let state in STATE) {
+                        this.states[DIRECTION[dir]][STATE[state]].visible = STATE[state] === this.state;
+                    }
                 }
             }
 
@@ -692,7 +696,7 @@
         update(player) {
             super.update();
 
-            let isColliding = this.collide(player, 0.75);
+            let isColliding = this.collide(player, 1);
             if(!this.moving && !isColliding) {
                 this.follow(player);
             }
@@ -701,7 +705,12 @@
                 if(isColliding && !this.timer_flag && player.isAlive) {
                     this.timer_flag = true;
                     this.punch();
-                    this.attack(player);
+
+                    window.setTimeout(() => {
+                        if(this.isAlive && this.collide(player, 1)) {
+                            this.attack(player);
+                        }
+                    }, 250);
                     window.setTimeout(() => {
                         this.timer_flag = false;
                     }, 1000)
